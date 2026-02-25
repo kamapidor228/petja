@@ -6,22 +6,20 @@ local LinkvertiseURL = "https://link-center.net/3666502/5DDDXI8BXlqk"
 local CorrectKey = game:HttpGet(RawKeyURL):gsub("%s+", "")
 
 local KeyWindow = Rayfield:CreateWindow({
-   Name = "Key System | rodzinka hub",
-   LoadingTitle = "Verification Required",
-   LoadingSubtitle = "by jaroslaw бедный",
-   ConfigurationSaving = { Enabled = false },
-   Theme = "AmberGlow" 
+    Name = "Key System | rodzinka hub",
+    LoadingTitle = "Verification Required",
+    LoadingSubtitle = "by jaroslaw bedny",
+    ConfigurationSaving = { Enabled = false },
+    Theme = "AmberGlow" 
 })
-
-local KeyTab = KeyWindow:CreateTab("Keys", 4483362458)
 
 local function StartMainScript()
     local Window = Rayfield:CreateWindow({
-       Name = "rodzinka hub",
-       LoadingTitle = "loading petja",
-       LoadingSubtitle = "by jaroslaw бедный",
-       ConfigurationSaving = { Enabled = false },
-       Theme = "AmberGlow" 
+        Name = "rodzinka hub",
+        LoadingTitle = "loading petja",
+        LoadingSubtitle = "by jaroslaw bedny",
+        ConfigurationSaving = { Enabled = false },
+        Theme = "AmberGlow" 
     })
 
     local Players = game:GetService("Players")
@@ -56,127 +54,113 @@ local function StartMainScript()
     local MoveTab = Window:CreateTab("Movement", 4483362458)
 
     MainTab:CreateToggle({
-       Name = "Enable Aimbot",
-       CurrentValue = false,
-       Callback = function(Value) _G.Aimbot = Value; FOVCircle.Visible = Value end,
+        Name = "Enable Aimbot",
+        CurrentValue = false,
+        Callback = function(Value) _G.Aimbot = Value; FOVCircle.Visible = Value end,
     })
 
     MainTab:CreateToggle({
-       Name = "Wall Check",
-       CurrentValue = true,
-       Callback = function(Value) _G.WallCheck = Value end,
+        Name = "Wall Check",
+        CurrentValue = true,
+        Callback = function(Value) _G.WallCheck = Value end,
     })
 
     MainTab:CreateDropdown({
-       Name = "Target Part",
-       Options = {"Head", "HumanoidRootPart"},
-       CurrentOption = {"Head"},
-       MultipleOptions = false,
-       Callback = function(Option) _G.TargetPart = Option[1] end,
+        Name = "Target Part",
+        Options = {"Head", "HumanoidRootPart"},
+        CurrentOption = {"Head"},
+        MultipleOptions = false,
+        Callback = function(Option) _G.TargetPart = Option[1] end,
     })
 
     MainTab:CreateSlider({
-       Name = "FOV Radius",
-       Range = {10, 600},
-       Increment = 5,
-       CurrentValue = 100,
-       Callback = function(Value) _G.FOV = Value end,
+        Name = "FOV Radius",
+        Range = {10, 600},
+        Increment = 5,
+        CurrentValue = 100,
+        Callback = function(Value) _G.FOV = Value end,
     })
 
     VisualsTab:CreateButton({
-       Name = "Force Clean Visuals",
-       Callback = function()
-          for i, v in pairs(PlayerTracers) do v.Visible = false; v:Remove() end
-          table.clear(PlayerTracers)
-          for i, v in pairs(PlayerNames) do v.Visible = false; v:Remove() end
-          table.clear(PlayerNames)
-          for _, p in pairs(Players:GetPlayers()) do
-             if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
-          end
-          _G.Tracers = false; _G.Names = false; _G.Chams = false
-          Rayfield:Notify({Title = "Visuals Reset", Content = "All ESP elements cleaned.", Duration = 3})
-       end,
-    })
-
-    VisualsTab:CreateToggle({
-       Name = "Chams",
-       CurrentValue = false,
-       Callback = function(Value) 
-          _G.Chams = Value 
-          if not Value then
-             for _, p in pairs(Players:GetPlayers()) do
+        Name = "Force Clean Visuals",
+        Callback = function()
+            for i, v in pairs(PlayerTracers) do v.Visible = false; v:Remove() end
+            table.clear(PlayerTracers)
+            for i, v in pairs(PlayerNames) do v.Visible = false; v:Remove() end
+            table.clear(PlayerNames)
+            for _, p in pairs(Players:GetPlayers()) do
                 if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
-             end
-          end
-       end,
+            end
+            _G.Tracers = false; _G.Names = false; _G.Chams = false
+        end,
     })
 
     VisualsTab:CreateToggle({
-       Name = "Show Names",
-       CurrentValue = false,
-       Callback = function(Value) _G.Names = Value end,
+        Name = "Chams",
+        CurrentValue = false,
+        Callback = function(Value) 
+            _G.Chams = Value 
+            if not Value then
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
+                end
+            end
+        end,
     })
-
-    VisualsTab:CreateSection("Tracers")
 
     VisualsTab:CreateToggle({
-       Name = "Enable Tracers",
-       CurrentValue = false,
-       Callback = function(Value) _G.Tracers = Value end,
+        Name = "Show Names",
+        CurrentValue = false,
+        Callback = function(Value) _G.Names = Value end,
     })
 
-    VisualsTab:CreateDropdown({
-       Name = "Tracer Origin",
-       Options = {"Top", "Bottom", "Mouse"},
-       CurrentOption = {"Bottom"},
-       Callback = function(Option) _G.TracerOrigin = Option[1] end,
+    VisualsTab:CreateToggle({
+        Name = "Enable Tracers",
+        CurrentValue = false,
+        Callback = function(Value) _G.Tracers = Value end,
     })
 
     MoveTab:CreateToggle({
-       Name = "Fly",
-       CurrentValue = false,
-       Callback = function(Value)
-          _G.FlyEnabled = Value
-          local char = LocalPlayer.Character
-          if Value and char and char:FindFirstChild("HumanoidRootPart") then
-             local bv = char.HumanoidRootPart:FindFirstChild("FlyVelocity") or Instance.new("BodyVelocity", char.HumanoidRootPart)
-             bv.Name = "FlyVelocity"
-             bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-             bv.Velocity = Vector3.new(0,0,0)
-          else
-             if char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("FlyVelocity") then
-                char.HumanoidRootPart.FlyVelocity:Destroy()
-             end
-          end
-       end,
+        Name = "Fly",
+        CurrentValue = false,
+        Callback = function(Value)
+            _G.FlyEnabled = Value
+            local char = LocalPlayer.Character
+            if Value and char and char:FindFirstChild("HumanoidRootPart") then
+                local bv = char.HumanoidRootPart:FindFirstChild("FlyVelocity") or Instance.new("BodyVelocity", char.HumanoidRootPart)
+                bv.Name = "FlyVelocity"
+                bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                bv.Velocity = Vector3.new(0,0,0)
+            else
+                if char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("FlyVelocity") then
+                    char.HumanoidRootPart.FlyVelocity:Destroy()
+                end
+            end
+        end,
     })
 
     MoveTab:CreateSlider({
-       Name = "Fly Speed",
-       Range = {10, 500},
-       Increment = 10,
-       CurrentValue = 50,
-       Callback = function(Value) _G.FlySpeed = Value end,
+        Name = "Fly Speed",
+        Range = {10, 500},
+        Increment = 10,
+        CurrentValue = 50,
+        Callback = function(Value) _G.FlySpeed = Value end,
     })
 
     MoveTab:CreateToggle({
-       Name = "Noclip",
-       CurrentValue = false,
-       Callback = function(Value) _G.Noclip = Value end,
+        Name = "Noclip",
+        CurrentValue = false,
+        Callback = function(Value) _G.Noclip = Value end,
     })
 
     local function isVisible(targetPart)
         if not _G.WallCheck then return true end
         local char = LocalPlayer.Character
         if not char then return false end
-        local origin = Camera.CFrame.Position
-        local destination = targetPart.Position
-        local direction = destination - origin
         local params = RaycastParams.new()
         params.FilterDescendantsInstances = {char, targetPart.Parent}
         params.FilterType = Enum.RaycastFilterType.Exclude
-        params.IgnoreWater = true
-        local result = workspace:Raycast(origin, direction, params)
+        local result = workspace:Raycast(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position, params)
         return result == nil
     end
 
@@ -219,7 +203,7 @@ local function StartMainScript()
                     local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                     if onScreen then
                         if _G.Tracers then
-                            local startPos = (_G.TracerOrigin == "Top" and Vector2.new(Camera.ViewportSize.X/2, 0)) or (_G.TracerOrigin == "Mouse" and UserInputService:GetMouseLocation()) or Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                            local startPos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                             line.From = startPos; line.To = Vector2.new(screenPos.X, screenPos.Y); visibleState = true
                         end
                         if _G.Names then
@@ -268,25 +252,27 @@ local function StartMainScript()
     end)
 end
 
+local KeyTab = KeyWindow:CreateTab("Keys", 4483362458)
+
 KeyTab:CreateInput({
-   Name = "Enter Key",
-   PlaceholderText = "Paste key here...",
-   RemoveTextAfterFocusLost = false,
-   Callback = function(Text)
-      if Text == CorrectKey then
-         Rayfield:Notify({Title = "Success!", Content = "Access Granted! Loading Hub...", Duration = 3})
-         KeyWindow:Destroy()
-         StartMainScript()
-      else
-         Rayfield:Notify({Title = "Wrong Key!", Content = "Please check Linkvertise.", Duration = 3})
-      end
-   end,
+    Name = "Enter Key",
+    PlaceholderText = "Paste key here...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        if Text == CorrectKey then
+            Rayfield:Notify({Title = "Success!", Content = "Access Granted!", Duration = 3})
+            KeyWindow:Destroy()
+            StartMainScript()
+        else
+            Rayfield:Notify({Title = "Error!", Content = "Wrong Key!", Duration = 3})
+        end
+    end,
 })
 
 KeyTab:CreateButton({
-   Name = "Get Key (Copy Link)",
-   Callback = function()
-      setclipboard(LinkvertiseURL)
-      Rayfield:Notify({Title = "Copied!", Content = "Linkvertise link copied to clipboard.", Duration = 5})
-   end,
+    Name = "Get Key",
+    Callback = function()
+        setclipboard(LinkvertiseURL)
+        Rayfield:Notify({Title = "Copied!", Content = "Link copied to clipboard", Duration = 5})
+    end,
 })
