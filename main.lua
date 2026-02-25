@@ -1,6 +1,6 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local RawKeyURL = "https://raw.githubusercontent.com/kamapidor228/petja/refs/heads/main/key.txt"
+local RawKeyURL = "https://raw.githubusercontent.com/kamapidor228/key.txt/refs/heads/main/key.txt"
 local LinkvertiseURL = "https://link-center.net/3666502/5DDDXI8BXlqk"
 
 local CorrectKey = game:HttpGet(RawKeyURL):gsub("%s+", "")
