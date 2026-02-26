@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "rodzinka hub",
    LoadingTitle = "loading petja",
-   LoadingSubtitle = "by jaroslaw бедный",
+   LoadingSubtitle = "by jaroslaw bedny",
    ConfigurationSaving = { Enabled = false },
    Theme = "AmberGlow" 
 })
@@ -16,6 +16,8 @@ local Camera = workspace.CurrentCamera
 
 _G.Aimbot = false
 _G.WallCheck = true
+_G.HitboxEnabled = false
+_G.HitboxSize = 40
 _G.Chams = false
 _G.Tracers = false
 _G.Names = false
@@ -27,7 +29,6 @@ _G.FlySpeed = 50
 _G.Noclip = false
 
 local GlobalThemeColor = Color3.fromRGB(0, 255, 255)
-
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
@@ -52,14 +53,30 @@ MainTab:CreateToggle({
    Callback = function(Value) _G.WallCheck = Value end,
 })
 
+MainTab:CreateSection("Hitboxes")
+
+MainTab:CreateToggle({
+   Name = "Enable Hitbox Expander",
+   CurrentValue = false,
+   Callback = function(Value) _G.HitboxEnabled = Value end,
+})
+
+MainTab:CreateSlider({
+   Name = "Hitbox Size",
+   Range = {1, 100},
+   Increment = 1,
+   CurrentValue = 40,
+   Callback = function(Value) _G.HitboxSize = Value end,
+})
+
+MainTab:CreateSection("Settings")
+
 MainTab:CreateDropdown({
    Name = "Target Part",
    Options = {"Head", "HumanoidRootPart"},
    CurrentOption = {"Head"},
    MultipleOptions = false,
-   Callback = function(Option)
-      _G.TargetPart = Option[1]
-   end,
+   Callback = function(Option) _G.TargetPart = Option[1] end,
 })
 
 MainTab:CreateSlider({
@@ -73,34 +90,14 @@ MainTab:CreateSlider({
 VisualsTab:CreateButton({
    Name = "Force Clean Visuals",
    Callback = function()
-      for i, v in pairs(PlayerTracers) do 
-         v.Visible = false
-         v:Remove() 
-      end
+      for i, v in pairs(PlayerTracers) do v.Visible = false; v:Remove() end
       table.clear(PlayerTracers)
-      
-      for i, v in pairs(PlayerNames) do 
-         v.Visible = false
-         v:Remove() 
-      end
+      for i, v in pairs(PlayerNames) do v.Visible = false; v:Remove() end
       table.clear(PlayerNames)
-      
       for _, p in pairs(Players:GetPlayers()) do
-         if p.Character and p.Character:FindFirstChild("v_Chams") then
-            p.Character.v_Chams:Destroy()
-         end
+         if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
       end
-      
-      _G.Tracers = false
-      _G.Names = false
-      _G.Chams = false
-      
-      Rayfield:Notify({
-         Title = "Visuals Reset",
-         Content = "All ESP elements have been cleaned.",
-         Duration = 3,
-         Image = 4483362458,
-      })
+      _G.Tracers = false; _G.Names = false; _G.Chams = false
    end,
 })
 
@@ -111,9 +108,7 @@ VisualsTab:CreateToggle({
       _G.Chams = Value 
       if not Value then
          for _, p in pairs(Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("v_Chams") then
-               p.Character.v_Chams:Destroy()
-            end
+            if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
          end
       end
    end,
@@ -137,6 +132,7 @@ VisualsTab:CreateDropdown({
    Name = "Tracer Origin",
    Options = {"Top", "Bottom", "Mouse"},
    CurrentOption = {"Bottom"},
+   MultipleOptions = false,
    Callback = function(Option) _G.TracerOrigin = Option[1] end,
 })
 
@@ -177,14 +173,13 @@ local function isVisible(targetPart)
     if not _G.WallCheck then return true end
     local char = LocalPlayer.Character
     if not char then return false end
-    local origin = Camera.CFrame.Position
-    local destination = targetPart.Position
-    local direction = destination - origin
+    
     local params = RaycastParams.new()
-    params.FilterDescendantsInstances = {char, targetPart.Parent}
+    params.FilterDescendantsInstances = {char, targetPart.Parent, workspace:FindFirstChild("Terrain")}
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.IgnoreWater = true
-    local result = workspace:Raycast(origin, direction, params)
+    
+    local result = workspace:Raycast(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position, params)
     return result == nil
 end
 
@@ -210,6 +205,20 @@ RunService.Stepped:Connect(function()
             if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+            local head = p.Character.Head
+            if _G.HitboxEnabled then
+                head.Size = Vector3.new(_G.HitboxSize, _G.HitboxSize, _G.HitboxSize)
+                head.Transparency = 0.7
+                head.CanCollide = false
+            else
+                head.Size = Vector3.new(1, 1, 1)
+                head.Transparency = 0
+            end
+        end
+    end
 end)
 
 RunService.RenderStepped:Connect(function()
@@ -221,36 +230,40 @@ RunService.RenderStepped:Connect(function()
             createESP(p)
             local line = PlayerTracers[p]
             local text = PlayerNames[p]
-            local visibleState = false
-            local nameState = false
+            local visibleState, nameState = false, false
+            
             if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Head") then
                 local hrp = p.Character.HumanoidRootPart
-                local head = p.Character.Head
                 local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                
                 if onScreen then
                     if _G.Tracers then
                         local startPos
-                        if _G.TracerOrigin == "Top" then startPos = Vector2.new(Camera.ViewportSize.X/2, 0)
-                        elseif _G.TracerOrigin == "Mouse" then startPos = UserInputService:GetMouseLocation()
-                        else startPos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y) end
+                        if _G.TracerOrigin == "Top" then 
+                            startPos = Vector2.new(Camera.ViewportSize.X/2, 0)
+                        elseif _G.TracerOrigin == "Mouse" then 
+                            startPos = UserInputService:GetMouseLocation()
+                        else 
+                            startPos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y) 
+                        end
+                        
                         line.From = startPos
                         line.To = Vector2.new(screenPos.X, screenPos.Y)
                         visibleState = true
                     end
+                    
                     if _G.Names then
-                        local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
+                        local headPos = Camera:WorldToViewportPoint(p.Character.Head.Position + Vector3.new(0, 2.5, 0))
                         text.Position = Vector2.new(headPos.X, headPos.Y)
                         text.Text = string.lower(p.Name)
                         nameState = true
                     end
+                    
                     if _G.Chams then
-                        local h = p.Character:FindFirstChild("v_Chams")
-                        if not h then
-                            h = Instance.new("Highlight", p.Character)
-                            h.Name = "v_Chams"
-                            h.FillColor = GlobalThemeColor
-                            h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                        end
+                        local h = p.Character:FindFirstChild("v_Chams") or Instance.new("Highlight", p.Character)
+                        h.Name = "v_Chams"
+                        h.FillColor = GlobalThemeColor
+                        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                     end
                 end
             end
@@ -274,21 +287,15 @@ RunService.RenderStepped:Connect(function()
     end
 
     if _G.Aimbot then
-        local closest = nil
-        local shortDist = _G.FOV
-        local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+        local closest, shortDist = nil, _G.FOV
+        local center = UserInputService:GetMouseLocation()
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(_G.TargetPart) then
                 local part = p.Character[_G.TargetPart]
                 local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
                 if onScreen then
                     local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                    if mag < shortDist then
-                        if isVisible(part) then
-                            shortDist = mag
-                            closest = part
-                        end
-                    end
+                    if mag < shortDist and isVisible(part) then shortDist = mag; closest = part end
                 end
             end
         end
