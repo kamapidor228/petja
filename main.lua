@@ -1,9 +1,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "rodzinka hub",
-   LoadingTitle = "loading petja",
-   LoadingSubtitle = "by jaroslaw bedny",
+   Name = "никита кравч хаб",
+   LoadingTitle = "loading ольга",
+   LoadingSubtitle = "by димасик",
    ConfigurationSaving = { Enabled = false },
    Theme = "AmberGlow" 
 })
