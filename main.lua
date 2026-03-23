@@ -24,19 +24,21 @@ _G.Chams = false
 _G.Tracers = false
 _G.Names = false
 _G.TracerOrigin = "Bottom"
-_G.AimbotFOV = 100 -- Это радиус круга аимбота
+_G.AimbotFOV = 100 
 _G.TargetPart = "Head"
 _G.FlyEnabled = false
 _G.FlySpeed = 50
 _G.Noclip = false
 _G.FastStrafe = false
 _G.StrafeSpeed = 50
+_G.WalkSpeed = 16
+_G.JumpPower = 50
 _G.LandEffect = true
 _G.WaveStyle = "Filled" 
-_G.CameraFOV = 70 -- Дефолтный FOV игры
+_G.CameraFOV = 70 
 
--- Пыльно-голубой цвет
-local GlobalThemeColor = Color3.fromRGB(100, 120, 140) 
+-- Динамический цвет
+_G.GlobalThemeColor = Color3.fromRGB(100, 120, 140) 
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1
@@ -58,10 +60,26 @@ MainTab:CreateToggle({
    Callback = function(Value) _G.Aimbot = Value; FOVCircle.Visible = Value end,
 })
 
+MainTab:CreateSlider({
+   Name = "Aimbot FOV Radius",
+   Range = {10, 600},
+   Increment = 5,
+   CurrentValue = 100,
+   Callback = function(Value) _G.AimbotFOV = Value end,
+})
+
 MainTab:CreateToggle({
    Name = "Wall Check",
    CurrentValue = true,
    Callback = function(Value) _G.WallCheck = Value end,
+})
+
+MainTab:CreateDropdown({
+   Name = "Target Part",
+   Options = {"Head", "HumanoidRootPart"},
+   CurrentOption = {"Head"},
+   MultipleOptions = false,
+   Callback = function(Option) _G.TargetPart = Option[1] end,
 })
 
 MainTab:CreateSection("Hitboxes")
@@ -78,37 +96,41 @@ MainTab:CreateSlider({
    Callback = function(Value) _G.HitboxSize = Value end,
 })
 
-MainTab:CreateDropdown({
-   Name = "Target Part",
-   Options = {"Head", "HumanoidRootPart"},
-   CurrentOption = {"Head"},
-   MultipleOptions = false,
-   Callback = function(Option) _G.TargetPart = Option[1] end,
-})
-
-MainTab:CreateSlider({
-   Name = "Aimbot FOV Radius",
-   Range = {10, 600},
-   Increment = 5,
-   CurrentValue = 100,
-   Callback = function(Value) _G.AimbotFOV = Value end,
-})
-
 -- VISUALS
-VisualsTab:CreateButton({
-   Name = "Force Clean Visuals",
-   Callback = function()
-      for i, v in pairs(PlayerTracers) do v.Visible = false; v:Remove() end
-      table.clear(PlayerTracers)
-      for i, v in pairs(PlayerNames) do v.Visible = false; v:Remove() end
-      table.clear(PlayerNames)
-      for _, p in pairs(Players:GetPlayers()) do
-         if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
-      end
-      _G.Tracers = false; _G.Names = false; _G.Chams = false
+VisualsTab:CreateSection("Visual Customization")
+VisualsTab:CreateColorPicker({
+    Name = "Visuals Color",
+    Color = _G.GlobalThemeColor,
+    Callback = function(Value) _G.GlobalThemeColor = Value end
+})
+
+VisualsTab:CreateSlider({
+   Name = "Field of View",
+   Range = {70, 120},
+   Increment = 1,
+   CurrentValue = 70,
+   Callback = function(Value) 
+      _G.CameraFOV = Value 
+      Camera.FieldOfView = Value
    end,
 })
 
+VisualsTab:CreateSection("Effects")
+VisualsTab:CreateToggle({
+   Name = "Enable Land Wave",
+   CurrentValue = true,
+   Callback = function(Value) _G.LandEffect = Value end,
+})
+
+VisualsTab:CreateDropdown({
+   Name = "Wave Style",
+   Options = {"Filled", "Ring"},
+   CurrentOption = {"Filled"},
+   MultipleOptions = false,
+   Callback = function(Option) _G.WaveStyle = Option[1] end,
+})
+
+VisualsTab:CreateSection("Player ESP")
 VisualsTab:CreateToggle({
    Name = "Chams",
    CurrentValue = false,
@@ -128,35 +150,59 @@ VisualsTab:CreateToggle({
    Callback = function(Value) _G.Names = Value end,
 })
 
-VisualsTab:CreateSection("Tracers Settings")
 VisualsTab:CreateToggle({
    Name = "Enable Tracers",
    CurrentValue = false,
    Callback = function(Value) _G.Tracers = Value end,
 })
 
-VisualsTab:CreateDropdown({
-   Name = "Tracer Origin",
-   Options = {"Top", "Bottom", "Mouse"},
-   CurrentOption = {"Bottom"},
-   MultipleOptions = false,
-   Callback = function(Option) _G.TracerOrigin = Option[1] end,
-})
-
--- MOVEMENT
-MoveTab:CreateSection("Camera Settings")
-MoveTab:CreateSlider({
-   Name = "Field of View",
-   Range = {70, 120},
-   Increment = 1,
-   CurrentValue = 70,
-   Callback = function(Value) 
-      _G.CameraFOV = Value 
-      Camera.FieldOfView = Value -- Применяем мгновенно
+VisualsTab:CreateButton({
+   Name = "Force Clean Visuals",
+   Callback = function()
+      for i, v in pairs(PlayerTracers) do v.Visible = false; v:Remove() end
+      table.clear(PlayerTracers)
+      for i, v in pairs(PlayerNames) do v.Visible = false; v:Remove() end
+      table.clear(PlayerNames)
+      for _, p in pairs(Players:GetPlayers()) do
+         if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
+      end
+      _G.Tracers = false; _G.Names = false; _G.Chams = false
    end,
 })
 
-MoveTab:CreateSection("Flying & Speed")
+-- MOVEMENT
+MoveTab:CreateSection("Character Physical")
+MoveTab:CreateSlider({
+   Name = "WalkSpeed",
+   Range = {16, 300},
+   Increment = 1,
+   CurrentValue = 16,
+   Callback = function(Value) _G.WalkSpeed = Value end,
+})
+
+MoveTab:CreateSlider({
+   Name = "JumpPower",
+   Range = {50, 500},
+   Increment = 1,
+   CurrentValue = 50,
+   Callback = function(Value) _G.JumpPower = Value end,
+})
+
+MoveTab:CreateSection("Strafing")
+MoveTab:CreateToggle({
+   Name = "Enable Fast Strafe",
+   CurrentValue = false,
+   Callback = function(Value) _G.FastStrafe = Value end,
+})
+MoveTab:CreateSlider({
+   Name = "Strafe Speed",
+   Range = {1, 300},
+   Increment = 1,
+   CurrentValue = 50,
+   Callback = function(Value) _G.StrafeSpeed = Value end,
+})
+
+MoveTab:CreateSection("Fly & Noclip")
 MoveTab:CreateToggle({
    Name = "Fly",
    CurrentValue = false,
@@ -190,45 +236,14 @@ MoveTab:CreateToggle({
    Callback = function(Value) _G.Noclip = Value end,
 })
 
-MoveTab:CreateSection("Strafing")
-MoveTab:CreateToggle({
-   Name = "Enable Fast Strafe",
-   CurrentValue = false,
-   Callback = function(Value) _G.FastStrafe = Value end,
-})
-MoveTab:CreateSlider({
-   Name = "Strafe Speed",
-   Range = {1, 200},
-   Increment = 1,
-   CurrentValue = 50,
-   Callback = function(Value) _G.StrafeSpeed = Value end,
-})
-
-MoveTab:CreateSection("Land Wave Settings")
-MoveTab:CreateToggle({
-   Name = "Enable Land Wave",
-   CurrentValue = true,
-   Callback = function(Value) _G.LandEffect = Value end,
-})
-
-MoveTab:CreateDropdown({
-   Name = "Wave Style",
-   Options = {"Filled", "Ring"},
-   CurrentOption = {"Filled"},
-   MultipleOptions = false,
-   Callback = function(Option) _G.WaveStyle = Option[1] end,
-})
-
--- ФУНКЦИЯ КРУГА
+-- ЛОГИКА
 local function PlayLandEffect(pos)
     if not _G.LandEffect then return end
     local wave = Instance.new("Part")
-    wave.Name = "LandWave"
     wave.Parent = workspace
     wave.Anchored = true
     wave.CanCollide = false
-    wave.CastShadow = false
-    wave.Color = GlobalThemeColor
+    wave.Color = _G.GlobalThemeColor
     wave.Material = Enum.Material.Neon
     wave.Transparency = 0.3
     wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90))
@@ -250,49 +265,19 @@ local function PlayLandEffect(pos)
     task.delay(0.6, function() wave:Destroy() end)
 end
 
--- Логика персонажа
-local function SetupCharacter(char)
-    local hum = char:WaitForChild("Humanoid")
-    hum.StateChanged:Connect(function(_, new)
-        if _G.LandEffect and new == Enum.HumanoidStateType.Landed then
-            PlayLandEffect(char.HumanoidRootPart.Position)
-        end
-    end)
-end
-
--- Вспомогательные функции
-local function isVisible(targetPart)
-    if not _G.WallCheck then return true end
-    local char = LocalPlayer.Character
-    if not char then return false end
-    local params = RaycastParams.new()
-    params.FilterDescendantsInstances = {char, targetPart.Parent, workspace:FindFirstChild("Terrain")}
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    local result = workspace:Raycast(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position, params)
-    return result == nil
-end
-
-local function createESP(player)
-    if PlayerTracers[player] then return end
-    local line = Drawing.new("Line"); line.Thickness = 1; line.Color = GlobalThemeColor
-    PlayerTracers[player] = line
-    local text = Drawing.new("Text"); text.Size = 13; text.Center = true; text.Outline = true; text.Color = GlobalThemeColor
-    PlayerNames[player] = text
-end
-
--- ОСНОВНОЙ ЦИКЛ
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
-    if not char then return end
+    if not char or not char:FindFirstChild("Humanoid") then return end
     
-    -- Удерживаем FOV (чтобы игра не сбрасывала его сама)
     Camera.FieldOfView = _G.CameraFOV
+    char.Humanoid.WalkSpeed = _G.WalkSpeed
+    char.Humanoid.JumpPower = _G.JumpPower
 
     if _G.Noclip then
         for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
     end
     
-    if _G.FastStrafe and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+    if _G.FastStrafe and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
         local hum = char.Humanoid
         if hum.MoveDirection.Magnitude > 0 then
@@ -322,7 +307,6 @@ RunService.Stepped:Connect(function()
             local h = p.Character.Head
             h.Size = _G.HitboxEnabled and Vector3.new(_G.HitboxSize, _G.HitboxSize, _G.HitboxSize) or Vector3.new(1,1,1)
             h.Transparency = _G.HitboxEnabled and 0.7 or 0
-            h.CanCollide = false
         end
     end
 end)
@@ -332,22 +316,27 @@ RunService.RenderStepped:Connect(function()
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
-            createESP(p)
+            if not PlayerTracers[p] then
+                PlayerTracers[p] = Drawing.new("Line")
+                PlayerNames[p] = Drawing.new("Text")
+            end
             local line, text = PlayerTracers[p], PlayerNames[p]
-            local vis, nameVis = false, false
+            line.Color = _G.GlobalThemeColor
+            text.Color = _G.GlobalThemeColor
             
+            local vis, nameVis = false, false
             if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 local hrp = p.Character.HumanoidRootPart
                 local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 if onScreen then
                     if _G.Tracers then
-                        local startPos = (_G.TracerOrigin == "Top" and Vector2.new(Camera.ViewportSize.X/2, 0)) or (_G.TracerOrigin == "Mouse" and UserInputService:GetMouseLocation()) or Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                        local startPos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                         line.From = startPos; line.To = Vector2.new(pos.X, pos.Y); vis = true
                     end
-                    if _G.Names then text.Position = Vector2.new(pos.X, pos.Y - 30); text.Text = p.Name:lower(); nameVis = true end
+                    if _G.Names then text.Position = Vector2.new(pos.X, pos.Y - 30); text.Text = p.Name:lower(); text.Center = true; text.Outline = true; nameVis = true end
                     if _G.Chams then
                         local h = p.Character:FindFirstChild("v_Chams") or Instance.new("Highlight", p.Character)
-                        h.Name = "v_Chams"; h.FillColor = GlobalThemeColor
+                        h.Name = "v_Chams"; h.FillColor = _G.GlobalThemeColor
                     end
                 end
             end
@@ -363,7 +352,7 @@ RunService.RenderStepped:Connect(function()
                 local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
                 if onScreen then
                     local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                    if mag < dist and isVisible(part) then dist = mag; closest = part end
+                    if mag < dist then dist = mag; closest = part end
                 end
             end
         end
@@ -371,7 +360,13 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(SetupCharacter)
-if LocalPlayer.Character then SetupCharacter(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.StateChanged:Connect(function(_, new)
+        if _G.LandEffect and new == Enum.HumanoidStateType.Landed then
+            PlayLandEffect(char.HumanoidRootPart.Position)
+        end
+    end)
+end)
 
-Rayfield:Notify({Title = "ти гг", Content = "сделано на нейронке by гг ден", Duration = 3})
+Rayfield:Notify({Title = "ти гг", Content = "сделано полностью на нейронке by гг ден", Duration = 3})
