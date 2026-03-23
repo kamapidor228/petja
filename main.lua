@@ -1,9 +1,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "никита кравч хаб",
-   LoadingTitle = "loading ольга",
-   LoadingSubtitle = "by димасик",
+   Name = "паста нурика hub",
+   LoadingTitle = "loading ратки",
+   LoadingSubtitle = "by петжа",
    ConfigurationSaving = { Enabled = false },
    Theme = "AmberGlow" 
 })
@@ -36,8 +36,6 @@ _G.JumpPower = 50
 _G.LandEffect = true
 _G.WaveStyle = "Filled" 
 _G.CameraFOV = 70 
-
--- Динамический цвет
 _G.GlobalThemeColor = Color3.fromRGB(100, 120, 140) 
 
 local FOVCircle = Drawing.new("Circle")
@@ -109,10 +107,7 @@ VisualsTab:CreateSlider({
    Range = {70, 120},
    Increment = 1,
    CurrentValue = 70,
-   Callback = function(Value) 
-      _G.CameraFOV = Value 
-      Camera.FieldOfView = Value
-   end,
+   Callback = function(Value) _G.CameraFOV = Value end,
 })
 
 VisualsTab:CreateSection("Effects")
@@ -156,17 +151,22 @@ VisualsTab:CreateToggle({
    Callback = function(Value) _G.Tracers = Value end,
 })
 
+VisualsTab:CreateDropdown({
+   Name = "Tracer Origin",
+   Options = {"Top", "Bottom", "Mouse"},
+   CurrentOption = {"Bottom"},
+   MultipleOptions = false,
+   Callback = function(Option) _G.TracerOrigin = Option[1] end,
+})
+
 VisualsTab:CreateButton({
    Name = "Force Clean Visuals",
    Callback = function()
-      for i, v in pairs(PlayerTracers) do v.Visible = false; v:Remove() end
-      table.clear(PlayerTracers)
-      for i, v in pairs(PlayerNames) do v.Visible = false; v:Remove() end
-      table.clear(PlayerNames)
+      for i, v in pairs(PlayerTracers) do v.Visible = false end
+      for i, v in pairs(PlayerNames) do v.Visible = false end
       for _, p in pairs(Players:GetPlayers()) do
          if p.Character and p.Character:FindFirstChild("v_Chams") then p.Character.v_Chams:Destroy() end
       end
-      _G.Tracers = false; _G.Names = false; _G.Chams = false
    end,
 })
 
@@ -210,13 +210,22 @@ MoveTab:CreateToggle({
       _G.FlyEnabled = Value
       local char = LocalPlayer.Character
       if Value and char and char:FindFirstChild("HumanoidRootPart") then
-         local bv = char.HumanoidRootPart:FindFirstChild("FlyVelocity") or Instance.new("BodyVelocity", char.HumanoidRootPart)
+         local bv = char.HumanoidRootPart:FindFirstChild("FlyVelocity") or Instance.new("BodyVelocity")
          bv.Name = "FlyVelocity"
+         bv.Parent = char.HumanoidRootPart
          bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
          bv.Velocity = Vector3.new(0,0,0)
+         
+         local bg = char.HumanoidRootPart:FindFirstChild("FlyGyro") or Instance.new("BodyGyro")
+         bg.Name = "FlyGyro"
+         bg.Parent = char.HumanoidRootPart
+         bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+         bg.P = 9000
+         bg.CFrame = char.HumanoidRootPart.CFrame
       else
-         if char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("FlyVelocity") then
-            char.HumanoidRootPart.FlyVelocity:Destroy()
+         if char and char:FindFirstChild("HumanoidRootPart") then
+            if char.HumanoidRootPart:FindFirstChild("FlyVelocity") then char.HumanoidRootPart.FlyVelocity:Destroy() end
+            if char.HumanoidRootPart:FindFirstChild("FlyGyro") then char.HumanoidRootPart.FlyGyro:Destroy() end
          end
       end
    end,
@@ -236,7 +245,7 @@ MoveTab:CreateToggle({
    Callback = function(Value) _G.Noclip = Value end,
 })
 
--- ЛОГИКА
+-- ЛОГИКА ЭФФЕКТОВ
 local function PlayLandEffect(pos)
     if not _G.LandEffect then return end
     local wave = Instance.new("Part")
@@ -246,15 +255,15 @@ local function PlayLandEffect(pos)
     wave.Color = _G.GlobalThemeColor
     wave.Material = Enum.Material.Neon
     wave.Transparency = 0.3
-    wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90))
-
+    local groundPos = pos - Vector3.new(0, 3, 0)
     if _G.WaveStyle == "Filled" then
         wave.Shape = Enum.PartType.Cylinder
+        wave.CFrame = CFrame.new(groundPos) * CFrame.Angles(0, 0, math.rad(90))
         wave.Size = Vector3.new(0.1, 1, 1)
         TweenService:Create(wave, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = Vector3.new(0.1, 16, 16), Transparency = 1}):Play()
     else
+        wave.CFrame = CFrame.new(groundPos) * CFrame.Angles(math.rad(90), 0, 0)
         wave.Size = Vector3.new(1, 1, 0.1)
-        wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(math.rad(90), 0, 0)
         local mesh = Instance.new("SpecialMesh", wave)
         mesh.MeshType = Enum.MeshType.FileMesh
         mesh.MeshId = "rbxassetid://3270017"
@@ -265,21 +274,43 @@ local function PlayLandEffect(pos)
     task.delay(0.6, function() wave:Destroy() end)
 end
 
+-- ГЛАВНЫЙ ЦИКЛ ОБНОВЛЕНИЯ
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("Humanoid") then return end
-    
+    local hum = char.Humanoid
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+
+    -- Камера и Базовая физика
     Camera.FieldOfView = _G.CameraFOV
-    char.Humanoid.WalkSpeed = _G.WalkSpeed
-    char.Humanoid.JumpPower = _G.JumpPower
+    hum.WalkSpeed = _G.WalkSpeed
+    hum.JumpPower = _G.JumpPower
+    hum.UseJumpPower = true -- Обязательно для JumpPower
 
     if _G.Noclip then
-        for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
+        for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     end
-    
-    if _G.FastStrafe and char:FindFirstChild("HumanoidRootPart") then
-        local hrp = char.HumanoidRootPart
-        local hum = char.Humanoid
+
+    -- ЛОГИКА FLY
+    if _G.FlyEnabled and hrp then
+        local bv = hrp:FindFirstChild("FlyVelocity")
+        local bg = hrp:FindFirstChild("FlyGyro")
+        if bv and bg then
+            local dir = Vector3.new(0,0,0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
+            
+            bv.Velocity = dir * _G.FlySpeed
+            bg.CFrame = Camera.CFrame
+        end
+    end
+
+    -- ЛОГИКА STRAFE
+    if _G.FastStrafe and hrp and not _G.FlyEnabled then
         if hum.MoveDirection.Magnitude > 0 then
             local rightVec = Camera.CFrame.RightVector
             if math.abs(hum.MoveDirection:Dot(rightVec)) > 0.1 then
@@ -288,85 +319,92 @@ RunService.Stepped:Connect(function()
         end
     end
 
-    if _G.FlyEnabled and char:FindFirstChild("HumanoidRootPart") then
-        local bv = char.HumanoidRootPart:FindFirstChild("FlyVelocity")
-        if bv then
-            local dir = Vector3.new(0,0,0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
-            bv.Velocity = dir * _G.FlySpeed
-        end
-    end
-
+    -- ХИТБОКСЫ
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            local h = p.Character.Head
-            h.Size = _G.HitboxEnabled and Vector3.new(_G.HitboxSize, _G.HitboxSize, _G.HitboxSize) or Vector3.new(1,1,1)
-            h.Transparency = _G.HitboxEnabled and 0.7 or 0
+            local head = p.Character.Head
+            if _G.HitboxEnabled then
+                head.Size = Vector3.new(_G.HitboxSize, _G.HitboxSize, _G.HitboxSize)
+                head.Transparency = 0.7
+                head.CanCollide = false
+            else
+                head.Size = Vector3.new(1, 1, 1)
+                head.Transparency = 0
+            end
         end
     end
 end)
 
+-- РЕНДЕР ВИЗУАЛОВ
 RunService.RenderStepped:Connect(function()
-    FOVCircle.Position = UserInputService:GetMouseLocation(); FOVCircle.Radius = _G.AimbotFOV
+    FOVCircle.Position = UserInputService:GetMouseLocation()
+    FOVCircle.Radius = _G.AimbotFOV
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
             if not PlayerTracers[p] then
                 PlayerTracers[p] = Drawing.new("Line")
                 PlayerNames[p] = Drawing.new("Text")
+                PlayerNames[p].Size = 13
+                PlayerNames[p].Center = true
+                PlayerNames[p].Outline = true
             end
-            local line, text = PlayerTracers[p], PlayerNames[p]
-            line.Color = _G.GlobalThemeColor
-            text.Color = _G.GlobalThemeColor
             
-            local vis, nameVis = false, false
-            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = p.Character.HumanoidRootPart
-                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                if onScreen then
+            local line, text = PlayerTracers[p], PlayerNames[p]
+            local vis, nVis = false, false
+            
+            if p.Character and p.Character:FindFirstChild("Head") then
+                local head = p.Character.Head
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen and pos.Z > 0 then
                     if _G.Tracers then
-                        local startPos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                        line.From = startPos; line.To = Vector2.new(pos.X, pos.Y); vis = true
+                        local start = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                        if _G.TracerOrigin == "Top" then start = Vector2.new(Camera.ViewportSize.X/2, 0)
+                        elseif _G.TracerOrigin == "Mouse" then start = UserInputService:GetMouseLocation() end
+                        line.From = start; line.To = Vector2.new(pos.X, pos.Y)
+                        line.Color = _G.GlobalThemeColor; vis = true
                     end
-                    if _G.Names then text.Position = Vector2.new(pos.X, pos.Y - 30); text.Text = p.Name:lower(); text.Center = true; text.Outline = true; nameVis = true end
+                    if _G.Names then
+                        text.Position = Vector2.new(pos.X, pos.Y - 35)
+                        text.Text = p.Name:lower(); text.Color = _G.GlobalThemeColor
+                        nVis = true
+                    end
                     if _G.Chams then
                         local h = p.Character:FindFirstChild("v_Chams") or Instance.new("Highlight", p.Character)
                         h.Name = "v_Chams"; h.FillColor = _G.GlobalThemeColor
                     end
                 end
             end
-            line.Visible = vis; text.Visible = nameVis
+            line.Visible = vis; text.Visible = nVis
         end
     end
-
+    
+    -- AIMBOT
     if _G.Aimbot then
-        local closest, dist = nil, _G.AimbotFOV
+        local target, dist = nil, _G.AimbotFOV
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(_G.TargetPart) then
                 local part = p.Character[_G.TargetPart]
-                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
+                local pos, os = Camera:WorldToViewportPoint(part.Position)
+                if os and pos.Z > 0 then
                     local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                    if mag < dist then dist = mag; closest = part end
+                    if mag < dist then dist = mag; target = part end
                 end
             end
         end
-        if closest then Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position) end
+        if target then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position) end
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
+-- ПРИЗЕМЛЕНИЕ
+local function SetupLand(char)
     local hum = char:WaitForChild("Humanoid")
     hum.StateChanged:Connect(function(_, new)
-        if _G.LandEffect and new == Enum.HumanoidStateType.Landed then
-            PlayLandEffect(char.HumanoidRootPart.Position)
-        end
+        if new == Enum.HumanoidStateType.Landed then PlayLandEffect(char.HumanoidRootPart.Position) end
     end)
-end)
+end
+LocalPlayer.CharacterAdded:Connect(SetupLand)
+if LocalPlayer.Character then SetupLand(LocalPlayer.Character) end
 
-Rayfield:Notify({Title = "ти гг", Content = "сделано полностью на нейронке by гг ден", Duration = 3})
+Rayfield:Notify({Title = "by гг ден", Content = "скрипт поностью сделан на нейронке", Duration = 3})
