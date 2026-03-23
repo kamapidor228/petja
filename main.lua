@@ -24,7 +24,7 @@ _G.Chams = false
 _G.Tracers = false
 _G.Names = false
 _G.TracerOrigin = "Bottom"
-_G.FOV = 100
+_G.AimbotFOV = 100 -- Это радиус круга аимбота
 _G.TargetPart = "Head"
 _G.FlyEnabled = false
 _G.FlySpeed = 50
@@ -33,9 +33,11 @@ _G.FastStrafe = false
 _G.StrafeSpeed = 50
 _G.LandEffect = true
 _G.WaveStyle = "Filled" 
-_G.ChinaHat = false -- Изначально выключена!
+_G.CameraFOV = 70 -- Дефолтный FOV игры
 
-local GlobalThemeColor = Color3.fromRGB(0, 255, 255)
+-- Пыльно-голубой цвет
+local GlobalThemeColor = Color3.fromRGB(100, 120, 140) 
+
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
@@ -85,22 +87,14 @@ MainTab:CreateDropdown({
 })
 
 MainTab:CreateSlider({
-   Name = "FOV Radius",
+   Name = "Aimbot FOV Radius",
    Range = {10, 600},
    Increment = 5,
    CurrentValue = 100,
-   Callback = function(Value) _G.FOV = Value end,
+   Callback = function(Value) _G.AimbotFOV = Value end,
 })
 
 -- VISUALS
-VisualsTab:CreateToggle({
-   Name = "China Hat",
-   CurrentValue = false,
-   Callback = function(Value) 
-      _G.ChinaHat = Value 
-   end,
-})
-
 VisualsTab:CreateButton({
    Name = "Force Clean Visuals",
    Callback = function()
@@ -150,6 +144,19 @@ VisualsTab:CreateDropdown({
 })
 
 -- MOVEMENT
+MoveTab:CreateSection("Camera Settings")
+MoveTab:CreateSlider({
+   Name = "Field of View",
+   Range = {70, 120},
+   Increment = 1,
+   CurrentValue = 70,
+   Callback = function(Value) 
+      _G.CameraFOV = Value 
+      Camera.FieldOfView = Value -- Применяем мгновенно
+   end,
+})
+
+MoveTab:CreateSection("Flying & Speed")
 MoveTab:CreateToggle({
    Name = "Fly",
    CurrentValue = false,
@@ -215,7 +222,6 @@ MoveTab:CreateDropdown({
 -- ФУНКЦИЯ КРУГА
 local function PlayLandEffect(pos)
     if not _G.LandEffect then return end
-    
     local wave = Instance.new("Part")
     wave.Name = "LandWave"
     wave.Parent = workspace
@@ -225,15 +231,15 @@ local function PlayLandEffect(pos)
     wave.Color = GlobalThemeColor
     wave.Material = Enum.Material.Neon
     wave.Transparency = 0.3
-    
+    wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90))
+
     if _G.WaveStyle == "Filled" then
         wave.Shape = Enum.PartType.Cylinder
-        wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90))
         wave.Size = Vector3.new(0.1, 1, 1)
         TweenService:Create(wave, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = Vector3.new(0.1, 16, 16), Transparency = 1}):Play()
     else
-        wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(math.rad(90), 0, 0)
         wave.Size = Vector3.new(1, 1, 0.1)
+        wave.CFrame = CFrame.new(pos - Vector3.new(0, 3, 0)) * CFrame.Angles(math.rad(90), 0, 0)
         local mesh = Instance.new("SpecialMesh", wave)
         mesh.MeshType = Enum.MeshType.FileMesh
         mesh.MeshId = "rbxassetid://3270017"
@@ -244,43 +250,8 @@ local function PlayLandEffect(pos)
     task.delay(0.6, function() wave:Destroy() end)
 end
 
--- ФУНКЦИЯ CHINA HAT (ПОЛНЫЙ ФИКС ПОЗИЦИИ)
-local function CreateChinaHat(char)
-    local head = char:WaitForChild("Head", 10)
-    if not head then return end
-    
-    local hat = Instance.new("Part")
-    hat.Name = "v_ChinaHat"
-    hat.Parent = char
-    hat.Size = Vector3.new(0.5, 0.2, 0.5)
-    hat.CanCollide = false
-    hat.Massless = true
-    hat.Color = GlobalThemeColor
-    hat.Material = Enum.Material.Neon
-    hat.Transparency = 0.3
-    
-    local mesh = Instance.new("SpecialMesh", hat)
-    mesh.MeshType = Enum.MeshType.FileMesh
-    mesh.MeshId = "rbxassetid://1778999"
-    mesh.Scale = Vector3.new(1.6, 0.7, 1.6) -- Аккуратный размер
-
-    local weld = Instance.new("Weld", hat)
-    weld.Part0 = hat
-    weld.Part1 = head
-    -- C0 регулирует позицию относительно головы. -0.45 сажает её ровно НА голову.
-    weld.C0 = CFrame.new(0, -0.65, -0.1) -- ПОДНЯЛ ВЫШЕ И ВПЕРЕД (НА КОЗЫРЕК)
-
-    RunService.RenderStepped:Connect(function()
-        if hat and hat.Parent then
-            hat.Visible = _G.ChinaHat -- ТЕПЕРЬ СЛУШАЕТСЯ КНОПКИ
-            hat.Color = GlobalThemeColor
-        end
-    end)
-end
-
 -- Логика персонажа
 local function SetupCharacter(char)
-    CreateChinaHat(char)
     local hum = char:WaitForChild("Humanoid")
     hum.StateChanged:Connect(function(_, new)
         if _G.LandEffect and new == Enum.HumanoidStateType.Landed then
@@ -313,6 +284,9 @@ end
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
+    
+    -- Удерживаем FOV (чтобы игра не сбрасывала его сама)
+    Camera.FieldOfView = _G.CameraFOV
 
     if _G.Noclip then
         for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
@@ -354,7 +328,7 @@ RunService.Stepped:Connect(function()
 end)
 
 RunService.RenderStepped:Connect(function()
-    FOVCircle.Position = UserInputService:GetMouseLocation(); FOVCircle.Radius = _G.FOV
+    FOVCircle.Position = UserInputService:GetMouseLocation(); FOVCircle.Radius = _G.AimbotFOV
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
@@ -382,7 +356,7 @@ RunService.RenderStepped:Connect(function()
     end
 
     if _G.Aimbot then
-        local closest, dist = nil, _G.FOV
+        local closest, dist = nil, _G.AimbotFOV
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(_G.TargetPart) then
                 local part = p.Character[_G.TargetPart]
@@ -400,4 +374,4 @@ end)
 LocalPlayer.CharacterAdded:Connect(SetupCharacter)
 if LocalPlayer.Character then SetupCharacter(LocalPlayer.Character) end
 
-Rayfield:Notify({Title = "Ready", Content = "сделано на нейронке by гг ден", Duration = 3})
+Rayfield:Notify({Title = "ти гг", Content = "сделано на нейронке by гг ден", Duration = 3})
